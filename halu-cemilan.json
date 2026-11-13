@@ -1,0 +1,32 @@
+{
+  "_catatan": "MOCK DATA. Ganti dengan konten asli mitra sebelum UAT.",
+  "store": {
+    "name": "Halu Cemilan Instan",
+    "tagline": "Camilan pedas gurih khas Bandung, langsung ke rumahmu",
+    "city": "Bandung",
+    "whatsapp_number": "6281200000000",
+    "order_code_prefix": "HC",
+    "primary_color": "#D9381E",
+    "accent_color": "#F2A900",
+    "font": "Poppins",
+    "opening_hours": "Senin–Sabtu 08.00–17.00 (info saja)",
+    "shipping_info": "Dikirim via ekspedisi, jadwal kirim hari kerja pukul 15.00."
+  },
+  "categories": ["Usus Ayam Crispy", "Seblak Instan", "Basreng", "Makaroni"],
+  "menu": [
+    {"cat": "Usus Ayam Crispy", "name": "Usus Ayam Crispy", "price": 18000, "weight": 100, "labels": ["Best Seller"],
+     "options": [{"group": "Level pedas", "required": true, "items": [["Original",0,0],["Level 1",0,0],["Level 3",500,0]]},
+                 {"group": "Ukuran", "required": true, "items": [["100 g",0,0],["250 g",25000,150]]}]},
+    {"cat": "Seblak Instan", "name": "Seblak Campur Instan", "price": 15000, "weight": 150, "labels": ["Pedas","Baru"],
+     "options": [{"group": "Level pedas", "required": true, "items": [["Sedang",0,0],["Pedas",0,0],["Pedas Gila",1000,0]]}]},
+    {"cat": "Basreng", "name": "Basreng Pedas Daun Jeruk", "price": 10000, "weight": 100, "labels": ["Best Seller","Pedas"], "options": []},
+    {"cat": "Basreng", "name": "Basreng Original", "price": 9000, "weight": 100, "labels": [], "options": []},
+    {"cat": "Makaroni", "name": "Makaroni Bantet", "price": 8000, "weight": 80, "labels": ["Baru"], "options": []},
+    {"cat": "Makaroni", "name": "Makaroni Spiral Balado", "price": 9000, "weight": 80, "labels": [], "options": [], "available": false}
+  ],
+  "faqs": [
+    ["Bagaimana cara memesan?", "Pilih menu, isi data, tekan Pesan via WhatsApp, lalu konfirmasi dengan penjual."],
+    ["Dikirim ke mana saja?", "Ke seluruh Indonesia via ekspedisi. Ongkir dikonfirmasi penjual."]
+  ],
+  "testimonials": [["Pelanggan Contoh", "Pedasnya pas, renyahnya awet."]]
+}

@@ -1,0 +1,12 @@
+# Checklist Konten dari Mitra
+- [ ] Logo (PNG/SVG, latar transparan) dan favicon
+- [ ] Foto sampul, foto produk per menu, foto dapur/tim (min. 800 px)
+- [ ] Warna brand (hex) atau screenshot Instagram
+- [ ] Daftar menu: nama, kategori, harga, berat (gram), komposisi, masa simpan, deskripsi
+- [ ] Varian per menu (level pedas, ukuran) beserta tambahan harga/berat
+- [ ] Nomor WhatsApp pesanan (format 08…/628…)
+- [ ] Alamat toko, tautan Google Maps, jam buka per hari
+- [ ] Info pengiriman: ekspedisi, jadwal kirim, jangkauan
+- [ ] Tautan Instagram, TikTok, marketplace
+- [ ] Cerita usaha, keunggulan, testimoni (izin tertulis), FAQ
+- [ ] Prefiks kode pesanan (2–3 huruf), mis. HC
