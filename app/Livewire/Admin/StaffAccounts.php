@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin;
 
+use App\Models\ActivityLog;
 use App\Models\Admin;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -72,10 +73,12 @@ class StaffAccounts extends Component
                 'temporary_password_expires_at' => now()->addDay(),
             ])->save();
 
-            DB::table('admin_password_resets')->insert([
-                'admin_id' => $staff->id,
-                'reset_by' => auth('admin')->id(),
-                'created_at' => now(),
+            // BR-35: setiap reset dicatat (siapa, kapan, akun mana).
+            ActivityLog::query()->create([
+                'admin_id' => auth('admin')->id(),
+                'action' => 'admin.password_reset',
+                'subject_type' => 'admin',
+                'subject_id' => $staff->id,
             ]);
         });
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id" style="--store-primary: {{ $store->primary_color }}; --store-accent: {{ $store->accent_color }}">
+<html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,6 +17,12 @@
     @else
         <meta name="robots" content="noindex, nofollow">
     @endif
+    @if ($fontUrl = $store->fontUrl())
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="{{ $fontUrl }}">
+    @endif
+    <style>{!! $store->themeCss() !!}</style>
     @vite('resources/css/app.css')
 </head>
 <body @class([

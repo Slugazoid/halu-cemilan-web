@@ -41,3 +41,16 @@
         @apply min-h-11 w-full rounded-lg border border-zinc-400 bg-background px-3 py-2 text-base shadow-xs focus-visible:outline-2 focus-visible:outline-offset-1 sm:text-sm;
     }
 }
+
+/*
+ * Tema toko dinamis: nilai --store-primary, --store-accent, dst. disuntikkan
+ * layout storefront dari store_settings (StoreSetting::themeCss()). Di sini
+ * dipetakan ke utilitas Tailwind: bg-brand, text-brand-fg, bg-accent, dst.
+ */
+@theme inline {
+    --color-brand: var(--store-primary);
+    --color-brand-fg: var(--store-on-primary);
+    --color-accent: var(--store-accent);
+    --color-accent-fg: var(--store-on-accent);
+    --font-sans: var(--store-font, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif);
+}

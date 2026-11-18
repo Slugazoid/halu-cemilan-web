@@ -8,9 +8,9 @@ use App\Livewire\Admin\StaffAccounts;
 use App\Livewire\Admin\StoreSettings;
 use App\Models\Admin;
 use App\Models\Category;
+use App\Models\Customer;
 use App\Models\MenuItem;
 use App\Models\StoreSetting;
-use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
@@ -30,7 +30,7 @@ class AdminPanelTest extends TestCase
     {
         $this->get(route('admin.dashboard'))->assertRedirectToRoute('admin.login');
 
-        $this->actingAs(User::factory()->create(), 'web')
+        $this->actingAs(Customer::factory()->create(), 'customer')
             ->get(route('admin.menu'))->assertRedirectToRoute('admin.login');
 
         $this->get(route('admin.login'))->assertOk()->assertHeader('X-Robots-Tag', 'noindex, nofollow');
@@ -101,7 +101,7 @@ class AdminPanelTest extends TestCase
             ->call('resetStaffPassword', $staff->id)
             ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('admin_password_resets', ['admin_id' => $staff->id, 'reset_by' => $owner->id]);
+        $this->assertDatabaseHas('activity_logs', ['admin_id' => $owner->id, 'action' => 'admin.password_reset', 'subject_type' => 'admin', 'subject_id' => $staff->id]);
         $this->assertTrue($staff->refresh()->must_change_password);
 
         $this->actingAs($staff, 'admin')->withSession(['admin.password_hash' => $previousSessionHash])
