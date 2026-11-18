@@ -1,2 +1,7 @@
 User-agent: *
-Disallow:
+Disallow: /admin
+Disallow: /checkout
+Disallow: /terkirim
+Disallow: /profil
+Disallow: /masuk
+Disallow: /daftar

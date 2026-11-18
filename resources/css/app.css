@@ -4,6 +4,53 @@
 @source '../../storage/framework/views/*.php';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --color-background: oklch(1 0 0);
+    --color-foreground: oklch(0.145 0 0);
+    --color-card: oklch(1 0 0);
+    --color-card-foreground: oklch(0.145 0 0);
+    --color-muted-foreground: oklch(0.48 0 0);
+    --color-destructive: oklch(0.50 0.20 27);
+    --color-border: oklch(0.9 0 0);
+    --color-sidebar: oklch(0.985 0 0);
+    --color-sidebar-foreground: oklch(0.145 0 0);
+    --color-sidebar-primary: oklch(0.205 0 0);
+    --color-sidebar-primary-foreground: oklch(0.985 0 0);
+    --color-sidebar-accent: oklch(0.94 0 0);
+    --color-sidebar-border: oklch(0.922 0 0);
+}
+
+@layer components {
+    .admin-nav {
+        @apply flex min-h-11 w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-sidebar-accent focus-visible:outline-2 aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-semibold;
+    }
+
+    .admin-button {
+        @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold hover:bg-sidebar-accent focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-60;
+    }
+
+    .admin-button-primary {
+        @apply bg-sidebar-primary text-sidebar-primary-foreground hover:bg-zinc-700;
+    }
+
+    .admin-button-outline {
+        @apply border border-border;
+    }
+
+    .admin-input {
+        @apply min-h-11 w-full rounded-lg border border-zinc-400 bg-background px-3 py-2 text-base shadow-xs focus-visible:outline-2 focus-visible:outline-offset-1 sm:text-sm;
+    }
+}
+
+/*
+ * Tema toko dinamis: nilai --store-primary, --store-accent, dst. disuntikkan
+ * layout storefront dari store_settings (StoreSetting::themeCss()). Di sini
+ * dipetakan ke utilitas Tailwind: bg-brand, text-brand-fg, bg-accent, dst.
+ */
+@theme inline {
+    --color-brand: var(--store-primary);
+    --color-brand-fg: var(--store-on-primary);
+    --color-accent: var(--store-accent);
+    --color-accent-fg: var(--store-on-accent);
+    --font-sans: var(--store-font, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif);
 }
