@@ -65,6 +65,21 @@
                 <x-admin.field name="item.weight_grams" label="Berat bersih (g)">
                     <input id="item.weight_grams" wire:model="item.weight_grams" class="admin-input" type="number" min="1" max="65535" required>
                 </x-admin.field>
+                <x-admin.field name="photo" label="Foto menu (JPG/PNG/WebP, maks. 5 MB)" class="sm:col-span-2">
+                    <input id="photo" type="file" wire:model="photo" accept="image/jpeg,image/png,image/webp" class="admin-input">
+                    <p wire:loading wire:target="photo" class="text-xs text-muted-foreground">Mengunggah…</p>
+                    @if ($photo && $photo->isPreviewable())
+                        <img src="{{ $photo->temporaryUrl() }}" alt="Pratinjau foto baru" class="mt-1 size-24 rounded-lg object-cover">
+                    @elseif ($currentPhoto)
+                        <div class="mt-1 flex items-end gap-3">
+                            <img src="{{ $currentPhoto }}" alt="Foto menu saat ini" class="size-24 rounded-lg object-cover">
+                            <button type="button" wire:click="removePhoto" wire:confirm="Hapus foto menu ini?" class="admin-button">Hapus foto</button>
+                        </div>
+                    @endif
+                </x-admin.field>
+                <x-admin.field name="item.photo_alt" label="Teks alternatif foto" class="sm:col-span-2">
+                    <input id="item.photo_alt" wire:model="item.photo_alt" class="admin-input" maxlength="125" placeholder="kosongkan = pakai nama menu">
+                </x-admin.field>
                 <x-admin.field name="item.description" label="Deskripsi menu" class="sm:col-span-2">
                     <textarea id="item.description" wire:model="item.description" class="admin-input" rows="2"></textarea>
                 </x-admin.field>
@@ -99,9 +114,14 @@
         <ul class="grid divide-y divide-border">
             @forelse ($items as $product)
                 <li wire:key="item-{{ $product->id }}" class="grid gap-2 py-2 sm:flex sm:items-center sm:justify-between">
-                    <div>
-                        <p class="break-words font-medium">{{ $product->name }}</p>
-                        <p class="text-sm text-muted-foreground">{{ $product->category->name }} · Rp {{ number_format($product->price, 0, ',', '.') }} · {{ $product->is_visible ? 'Tampil' : 'Tersembunyi' }}{{ $product->is_featured ? ' · Unggulan' : '' }}</p>
+                    <div class="flex items-center gap-3">
+                        @if ($product->photo_url)
+                            <img src="{{ $product->photo_url }}" alt="{{ $product->photo_alt_text }}" width="48" height="48" loading="lazy" class="size-12 shrink-0 rounded-lg object-cover">
+                        @endif
+                        <div>
+                            <p class="break-words font-medium">{{ $product->name }}</p>
+                            <p class="text-sm text-muted-foreground">{{ $product->category->name }} · Rp {{ number_format($product->price, 0, ',', '.') }} · {{ $product->is_visible ? 'Tampil' : 'Tersembunyi' }}{{ $product->is_featured ? ' · Unggulan' : '' }}</p>
+                        </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" wire:click="toggleAvailability({{ $product->id }})" wire:loading.attr="disabled" aria-pressed="{{ $product->is_available ? 'true' : 'false' }}" class="admin-button admin-button-outline">{{ $product->is_available ? 'Tersedia' : 'Habis' }}</button>

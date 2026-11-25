@@ -5,29 +5,35 @@ namespace App\Livewire\Admin;
 use App\Models\Category;
 use App\Models\MenuItem;
 use App\Models\StoreSetting;
+use App\Services\ImageService;
 use App\Services\RedirectService;
 use App\Support\SlugGenerator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 class Catalog extends Component
 {
-    use WithPagination;
+    use WithFileUploads, WithPagination;
 
     private const array ITEM_DEFAULTS = [
         'category_id' => '', 'name' => '', 'slug' => '', 'description' => '', 'price' => '', 'weight_grams' => '',
-        'ingredients' => '', 'shelf_life' => '', 'sort_order' => 0,
+        'photo_alt' => '', 'ingredients' => '', 'shelf_life' => '', 'sort_order' => 0,
         'is_visible' => true, 'is_available' => true, 'is_featured' => false,
     ];
 
     public array $item = self::ITEM_DEFAULTS;
 
     public array $category = ['name' => '', 'slug' => '', 'description' => '', 'sort_order' => 0];
+
+    /** Foto baru yang dipilih di form menu (belum disimpan). */
+    public $photo = null;
 
     #[Locked]
     public ?int $editingItem = null;
@@ -50,10 +56,12 @@ class Catalog extends Component
 
     public function saveItem(): void
     {
-        $data = $this->validate([
+        $validated = $this->validate([
             'item' => ['required', 'array:'.implode(',', array_keys(self::ITEM_DEFAULTS))],
             'item.name' => ['required', 'string', 'max:80'],
             'item.slug' => ['nullable', 'string', 'max:60'],
+            'item.photo_alt' => ['nullable', 'string', 'max:125'],
+            'photo' => ['nullable', ...ImageService::rules()],
             'item.category_id' => ['required', 'integer', Rule::exists('categories', 'id')->withoutTrashed()],
             'item.price' => ['required', 'integer', 'between:1,4294967295'],
             'item.weight_grams' => ['required', 'integer', 'between:1,65535'],
@@ -64,11 +72,13 @@ class Catalog extends Component
             'item.is_visible' => ['required', 'boolean'],
             'item.is_available' => ['required', 'boolean'],
             'item.is_featured' => ['required', 'boolean'],
-        ])['item'];
+        ]);
+        $data = $validated['item'];
+        $data['photo_alt'] = filled($data['photo_alt'] ?? null) ? trim($data['photo_alt']) : null;
 
         $redirects = app(RedirectService::class);
 
-        DB::transaction(function () use ($data, $redirects): void {
+        $item = DB::transaction(function () use ($data, $redirects): MenuItem {
             StoreSetting::query()->lockForUpdate()->findOrFail(StoreSetting::SINGLETON_ID);
             Category::query()->findOrFail($data['category_id']);
             $item = $this->editingItem === null ? new MenuItem : MenuItem::query()->findOrFail($this->editingItem);
@@ -93,16 +103,43 @@ class Catalog extends Component
             if ($oldSlug !== null && $item->slug !== $oldSlug) {
                 $redirects->record('/menu/'.$oldSlug, '/menu/'.$item->slug);
             }
+
+            return $item;
         });
 
+        // Foto dikonversi ke WebP di belakang layar (queue); kolom photo_path terisi setelah job selesai.
+        $hasNewPhoto = $this->photo !== null;
+
+        if ($hasNewPhoto) {
+            app(ImageService::class)->queue($item, 'photo_path', $this->photo, $item->slug, 'menu');
+        }
+
         $this->cancelItem();
-        session()->flash('status', 'Menu disimpan.');
+        session()->flash('status', $hasNewPhoto ? 'Menu disimpan. Foto sedang diproses.' : 'Menu disimpan.');
     }
 
     public function cancelItem(): void
     {
-        $this->reset('item', 'editingItem');
+        $this->reset('item', 'editingItem', 'photo');
         $this->resetValidation();
+    }
+
+    public function removePhoto(): void
+    {
+        abort_if($this->editingItem === null, 404);
+
+        DB::transaction(function (): void {
+            StoreSetting::query()->lockForUpdate()->findOrFail(StoreSetting::SINGLETON_ID);
+            $item = MenuItem::query()->findOrFail($this->editingItem);
+
+            if ($item->photo_path) {
+                Storage::disk('public')->delete($item->photo_path);
+                $item->forceFill(['photo_path' => null])->save();
+            }
+        });
+
+        $this->reset('photo');
+        session()->flash('status', 'Foto dihapus.');
     }
 
     public function toggleAvailability(int $id): void
@@ -212,6 +249,7 @@ class Catalog extends Component
         return view('livewire.admin.catalog', [
             'categories' => Category::query()->orderBy('sort_order')->orderBy('name')->get(),
             'items' => MenuItem::query()->with('category')->orderBy('sort_order')->orderBy('id')->paginate(12),
+            'currentPhoto' => $this->editingItem ? MenuItem::query()->find($this->editingItem)?->photo_url : null,
         ]);
     }
 }
