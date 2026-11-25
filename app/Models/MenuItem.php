@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\ClearsPublicCache;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -27,6 +28,18 @@ class MenuItem extends Model
             'is_visible' => 'boolean',
             'is_featured' => 'boolean',
         ];
+    }
+
+    /** URL foto menu, atau null bila belum ada foto. */
+    protected function photoUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->photo_path ? asset('storage/'.$this->photo_path) : null);
+    }
+
+    /** Teks alt foto; bawaan = nama menu (FR-116). */
+    protected function photoAltText(): Attribute
+    {
+        return Attribute::get(fn (): string => $this->photo_alt ?: $this->name);
     }
 
     public function category(): BelongsTo
