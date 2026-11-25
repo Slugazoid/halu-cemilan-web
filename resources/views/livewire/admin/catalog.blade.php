@@ -7,6 +7,9 @@
             <x-admin.field name="category.name" label="Nama kategori">
                 <input id="category.name" wire:model="category.name" class="admin-input" required maxlength="60">
             </x-admin.field>
+            <x-admin.field name="category.slug" label="Alamat (slug)">
+                <input id="category.slug" wire:model="category.slug" class="admin-input" maxlength="60" placeholder="otomatis dari nama">
+            </x-admin.field>
             <x-admin.field name="category.description" label="Deskripsi singkat">
                 <input id="category.description" wire:model="category.description" class="admin-input">
             </x-admin.field>
@@ -41,6 +44,12 @@
             <form wire:submit="saveItem" class="grid gap-4 sm:grid-cols-2">
                 <x-admin.field name="item.name" label="Nama menu">
                     <input id="item.name" wire:model="item.name" class="admin-input" maxlength="80" required>
+                </x-admin.field>
+                <x-admin.field name="item.slug" label="Alamat halaman (slug)">
+                    <input id="item.slug" wire:model="item.slug" class="admin-input" maxlength="60" placeholder="kosongkan = otomatis dari nama">
+                    @if ($editingItem)
+                        <p class="text-xs text-muted-foreground">Jika diubah, alamat lama otomatis dialihkan ke alamat baru.</p>
+                    @endif
                 </x-admin.field>
                 <x-admin.field name="item.category_id" label="Kategori">
                     <select id="item.category_id" wire:model="item.category_id" class="admin-input" required>

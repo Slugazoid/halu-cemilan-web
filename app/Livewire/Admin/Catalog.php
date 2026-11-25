@@ -5,9 +5,9 @@ namespace App\Livewire\Admin;
 use App\Models\Category;
 use App\Models\MenuItem;
 use App\Models\StoreSetting;
-use Illuminate\Database\Eloquent\Builder;
+use App\Services\RedirectService;
+use App\Support\SlugGenerator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -20,14 +20,14 @@ class Catalog extends Component
     use WithPagination;
 
     private const array ITEM_DEFAULTS = [
-        'category_id' => '', 'name' => '', 'description' => '', 'price' => '', 'weight_grams' => '',
+        'category_id' => '', 'name' => '', 'slug' => '', 'description' => '', 'price' => '', 'weight_grams' => '',
         'ingredients' => '', 'shelf_life' => '', 'sort_order' => 0,
         'is_visible' => true, 'is_available' => true, 'is_featured' => false,
     ];
 
     public array $item = self::ITEM_DEFAULTS;
 
-    public array $category = ['name' => '', 'description' => '', 'sort_order' => 0];
+    public array $category = ['name' => '', 'slug' => '', 'description' => '', 'sort_order' => 0];
 
     #[Locked]
     public ?int $editingItem = null;
@@ -53,6 +53,7 @@ class Catalog extends Component
         $data = $this->validate([
             'item' => ['required', 'array:'.implode(',', array_keys(self::ITEM_DEFAULTS))],
             'item.name' => ['required', 'string', 'max:80'],
+            'item.slug' => ['nullable', 'string', 'max:60'],
             'item.category_id' => ['required', 'integer', Rule::exists('categories', 'id')->withoutTrashed()],
             'item.price' => ['required', 'integer', 'between:1,4294967295'],
             'item.weight_grams' => ['required', 'integer', 'between:1,65535'],
@@ -65,7 +66,9 @@ class Catalog extends Component
             'item.is_featured' => ['required', 'boolean'],
         ])['item'];
 
-        DB::transaction(function () use ($data): void {
+        $redirects = app(RedirectService::class);
+
+        DB::transaction(function () use ($data, $redirects): void {
             StoreSetting::query()->lockForUpdate()->findOrFail(StoreSetting::SINGLETON_ID);
             Category::query()->findOrFail($data['category_id']);
             $item = $this->editingItem === null ? new MenuItem : MenuItem::query()->findOrFail($this->editingItem);
@@ -74,11 +77,22 @@ class Catalog extends Component
                 throw ValidationException::withMessages(['item.is_featured' => 'Maksimal delapan menu unggulan.']);
             }
 
+            // Slug: kosong = otomatis dari nama; diubah = simpan alamat lama sebagai redirect 301 (BR-49, BR-50).
+            $oldSlug = $item->exists ? $item->slug : null;
+            $slug = trim((string) ($data['slug'] ?? ''));
+            unset($data['slug']);
+
             if (! $item->exists) {
-                $data['slug'] = $this->uniqueSlug(MenuItem::withTrashed(), $data['name'], 'menu');
+                $item->slug = SlugGenerator::unique(MenuItem::class, $slug !== '' ? $slug : $data['name']);
+            } elseif ($slug !== '' && $slug !== $oldSlug) {
+                $item->slug = SlugGenerator::unique(MenuItem::class, $slug, $item->id);
             }
 
             $item->fill($data)->save();
+
+            if ($oldSlug !== null && $item->slug !== $oldSlug) {
+                $redirects->record('/menu/'.$oldSlug, '/menu/'.$item->slug);
+            }
         });
 
         $this->cancelItem();
@@ -123,26 +137,43 @@ class Catalog extends Component
     {
         $this->resetValidation();
         $this->editingCategory = $id;
-        $this->category = Category::query()->findOrFail($id)->only(['name', 'description', 'sort_order']);
+        $this->category = Category::query()->findOrFail($id)->only(['name', 'slug', 'description', 'sort_order']);
     }
 
     public function saveCategory(): void
     {
         $data = $this->validate([
-            'category' => ['required', 'array:name,description,sort_order'],
+            'category' => ['required', 'array:name,slug,description,sort_order'],
             'category.name' => ['required', 'string', 'max:60'],
+            'category.slug' => ['nullable', 'string', 'max:60'],
             'category.description' => ['nullable', 'string', 'max:5000'],
             'category.sort_order' => ['required', 'integer', 'between:0,99999'],
         ])['category'];
 
-        DB::transaction(function () use ($data): void {
+        $redirects = app(RedirectService::class);
+
+        DB::transaction(function () use ($data, $redirects): void {
             StoreSetting::query()->lockForUpdate()->findOrFail(StoreSetting::SINGLETON_ID);
 
+            $slug = trim((string) ($data['slug'] ?? ''));
+            unset($data['slug']);
+
             if ($this->editingCategory === null) {
-                $data['slug'] = $this->uniqueSlug(Category::withTrashed(), $data['name'], 'kategori');
+                $data['slug'] = SlugGenerator::unique(Category::class, $slug !== '' ? $slug : $data['name']);
                 Category::query()->create($data);
             } else {
-                Category::query()->findOrFail($this->editingCategory)->update($data);
+                $category = Category::query()->findOrFail($this->editingCategory);
+                $oldSlug = $category->slug;
+
+                if ($slug !== '' && $slug !== $oldSlug) {
+                    $data['slug'] = SlugGenerator::unique(Category::class, $slug, $category->id);
+                }
+
+                $category->update($data);
+
+                if ($category->slug !== $oldSlug) {
+                    $redirects->record('/menu/kategori/'.$oldSlug, '/menu/kategori/'.$category->slug);
+                }
             }
         });
 
@@ -182,19 +213,5 @@ class Catalog extends Component
             'categories' => Category::query()->orderBy('sort_order')->orderBy('name')->get(),
             'items' => MenuItem::query()->with('category')->orderBy('sort_order')->orderBy('id')->paginate(12),
         ]);
-    }
-
-    /** @param Builder<Category|MenuItem> $query */
-    private function uniqueSlug(Builder $query, string $name, string $fallback): string
-    {
-        $base = Str::slug($name) ?: $fallback;
-        $slug = rtrim(substr($base, 0, 60), '-');
-
-        for ($index = 2; (clone $query)->where('slug', $slug)->exists(); $index++) {
-            $suffix = '-'.$index;
-            $slug = rtrim(substr($base, 0, 60 - strlen($suffix)), '-').$suffix;
-        }
-
-        return $slug;
     }
 }
