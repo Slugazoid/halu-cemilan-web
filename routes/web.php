@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminPasswordController;
 use App\Http\Controllers\AdminSessionController;
+use App\Http\Controllers\RegionLookupController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Middleware\EnsureAdminAccess;
 use App\Http\Middleware\PreventAdminIndexing;
@@ -15,6 +16,16 @@ Route::get('/menu/{slug}', [StorefrontController::class, 'item'])->name('store.i
 Route::get('/kebijakan-privasi', [StorefrontController::class, 'legal'])->name('store.privacy');
 Route::get('/syarat-ketentuan', [StorefrontController::class, 'legal'])->name('store.terms');
 Route::get('/sitemap.xml', [StorefrontController::class, 'sitemap'])->name('store.sitemap');
+
+Route::prefix('api/wilayah')->name('regions.')->middleware('throttle:60,1')->group(function (): void {
+    Route::get('/provinsi', [RegionLookupController::class, 'provinces'])->name('provinces');
+    Route::get('/provinsi/{provinceCode}/kabupaten', [RegionLookupController::class, 'regencies'])
+        ->where('provinceCode', '[0-9]{2}')->name('regencies');
+    Route::get('/kabupaten/{regencyCode}/kecamatan', [RegionLookupController::class, 'districts'])
+        ->where('regencyCode', '[0-9]{4}')->name('districts');
+    Route::get('/kecamatan/{districtCode}/kelurahan', [RegionLookupController::class, 'villages'])
+        ->where('districtCode', '[0-9]{6}')->name('villages');
+});
 
 Route::prefix('admin')->name('admin.')->middleware(PreventAdminIndexing::class)->group(function (): void {
     Route::get('/masuk', [AdminSessionController::class, 'create'])->name('login');

@@ -21,4 +21,9 @@ class Village extends Model
     {
         return $this->belongsTo(District::class, 'district_code', 'code');
     }
+
+    public function isOther(): bool
+    {
+        return str_ends_with($this->code, 'LNY');
+    }
 }
