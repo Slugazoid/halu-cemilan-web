@@ -30,10 +30,16 @@
             </div>
         </form>
         @error('archive') <p role="alert" class="text-sm text-destructive">{{ $message }}</p> @enderror
-        <ul class="grid divide-y divide-border">
+        @if ($categories->count() > 1)
+            <p class="text-sm text-muted-foreground">Seret ikon ⋮⋮ untuk mengatur urutan kategori.</p>
+        @endif
+        <ul wire:sort="sortCategory" class="grid divide-y divide-border">
             @forelse ($categories as $row)
-                <li wire:key="category-{{ $row->id }}" class="flex flex-wrap items-center justify-between gap-2 py-2">
-                    <span class="min-w-0 break-words">{{ $row->name }}</span>
+                <li wire:key="category-{{ $row->id }}" wire:sort:item="{{ $row->id }}" class="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span wire:sort:handle role="img" aria-label="Seret untuk mengubah urutan" class="cursor-grab select-none px-1 text-muted-foreground" title="Seret untuk mengubah urutan">⋮⋮</span>
+                        <span class="min-w-0 break-words">{{ $row->name }}</span>
+                    </div>
                     <div class="flex gap-2">
                         <button type="button" wire:click="editCategory({{ $row->id }})" class="admin-button admin-button-outline">Edit</button>
                         <button type="button" wire:click="archiveCategory({{ $row->id }})" wire:confirm="Arsipkan kategori ini?" class="admin-button">Arsipkan</button>
@@ -177,10 +183,14 @@
     <x-admin.card title="Daftar menu">
         <p class="text-sm text-muted-foreground">Menu unggulan: {{ $featuredCount }} dari {{ $maxFeatured }}. Tampil di beranda.</p>
         @error('featured') <p role="alert" class="text-sm text-destructive">{{ $message }}</p> @enderror
-        <ul class="grid divide-y divide-border">
+        @if ($items->total() > 1)
+            <p class="text-sm text-muted-foreground">Seret ikon ⋮⋮ untuk mengatur urutan menu di halaman ini. Urutan ini dipakai di situs.</p>
+        @endif
+        <ul wire:sort="sortItem" class="grid divide-y divide-border">
             @forelse ($items as $product)
-                <li wire:key="item-{{ $product->id }}" class="grid gap-2 py-2 sm:flex sm:items-center sm:justify-between">
+                <li wire:key="item-{{ $product->id }}" wire:sort:item="{{ $product->id }}" class="grid gap-2 py-2 sm:flex sm:items-center sm:justify-between">
                     <div class="flex items-center gap-3">
+                        <span wire:sort:handle role="img" aria-label="Seret untuk mengubah urutan" class="cursor-grab select-none px-1 text-muted-foreground" title="Seret untuk mengubah urutan">⋮⋮</span>
                         @if ($product->photo_url)
                             <img src="{{ $product->photo_url }}" alt="{{ $product->photo_alt_text }}" width="48" height="48" loading="lazy" class="size-12 shrink-0 rounded-lg object-cover">
                         @endif

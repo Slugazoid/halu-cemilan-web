@@ -11,6 +11,7 @@ use App\Services\ImageService;
 use App\Services\RedirectService;
 use App\Support\PublicCache;
 use App\Support\SlugGenerator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -24,6 +25,8 @@ use Livewire\WithPagination;
 class Catalog extends Component
 {
     use WithFileUploads, WithPagination;
+
+    private const int PER_PAGE = 12;
 
     private const array ITEM_DEFAULTS = [
         'category_id' => '', 'name' => '', 'slug' => '', 'description' => '', 'price' => '', 'weight_grams' => '',
@@ -228,6 +231,42 @@ class Catalog extends Component
         session()->flash('status', 'Foto dihapus.');
     }
 
+    /** Seret kategori ke urutan baru (FR-44). `$position` = indeks baru, mulai dari 0. */
+    public function sortCategory(int|string $id, int $position): void
+    {
+        DB::transaction(function () use ($id, $position): void {
+            StoreSetting::query()->lockForUpdate()->findOrFail(StoreSetting::SINGLETON_ID);
+
+            $this->renumber(
+                Category::query()->orderBy('sort_order')->orderBy('name')->get(),
+                (int) $id,
+                $position,
+            );
+        });
+
+        if ($this->editingCategory !== null) {
+            $this->category['sort_order'] = Category::query()->findOrFail($this->editingCategory)->sort_order;
+        }
+    }
+
+    /** Seret menu ke urutan baru (FR-44). `$position` = indeks di halaman yang sedang dibuka. */
+    public function sortItem(int|string $id, int $position): void
+    {
+        DB::transaction(function () use ($id, $position): void {
+            StoreSetting::query()->lockForUpdate()->findOrFail(StoreSetting::SINGLETON_ID);
+
+            $this->renumber(
+                MenuItem::query()->orderBy('sort_order')->orderBy('id')->get(),
+                (int) $id,
+                ($this->getPage() - 1) * self::PER_PAGE + $position,
+            );
+        });
+
+        if ($this->editingItem !== null) {
+            $this->item['sort_order'] = MenuItem::query()->findOrFail($this->editingItem)->sort_order;
+        }
+    }
+
     /** Tandai/lepas menu unggulan langsung dari daftar (FR-15, maks. 8). */
     public function toggleFeatured(int $id): void
     {
@@ -359,7 +398,7 @@ class Catalog extends Component
     {
         return view('livewire.admin.catalog', [
             'categories' => Category::query()->orderBy('sort_order')->orderBy('name')->get(),
-            'items' => MenuItem::query()->with('category')->orderBy('sort_order')->orderBy('id')->paginate(12),
+            'items' => MenuItem::query()->with('category')->orderBy('sort_order')->orderBy('id')->paginate(self::PER_PAGE),
             'featuredCount' => MenuItem::query()->where('is_featured', true)->count(),
             'maxFeatured' => self::MAX_FEATURED,
             'currentPhoto' => $this->editingItem ? MenuItem::query()->find($this->editingItem)?->photo_url : null,
@@ -367,6 +406,30 @@ class Catalog extends Component
     }
 
     /** @return array{id: null, name: string, extra_price: int, extra_weight_grams: int} */
+    /**
+     * Pindahkan baris `$id` ke indeks `$target` lalu beri nomor urut 1, 2, 3, ... ke semua baris.
+     * Hanya baris yang nomornya berubah yang disimpan.
+     *
+     * @param  Collection<int, Category|MenuItem>  $rows  dalam urutan tampil saat ini
+     */
+    private function renumber($rows, int $id, int $target): void
+    {
+        $moved = $rows->firstWhere('id', $id);
+
+        if ($moved === null) {
+            return;
+        }
+
+        $ordered = $rows->reject(fn ($row) => $row->id === $id)->values();
+        $ordered->splice(max(0, min($target, $ordered->count())), 0, [$moved]);
+
+        foreach ($ordered->values() as $index => $row) {
+            if ($row->sort_order !== $index + 1) {
+                $row->update(['sort_order' => $index + 1]);
+            }
+        }
+    }
+
     private function blankOption(): array
     {
         return ['id' => null, 'name' => '', 'extra_price' => 0, 'extra_weight_grams' => 0];
