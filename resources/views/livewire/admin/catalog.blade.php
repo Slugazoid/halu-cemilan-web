@@ -92,6 +92,17 @@
                 <x-admin.field name="item.sort_order" label="Urutan">
                     <input id="item.sort_order" wire:model="item.sort_order" class="admin-input" type="number" min="0" max="99999" required>
                 </x-admin.field>
+                <fieldset class="sm:col-span-2">
+                    <legend class="text-sm font-medium">Label</legend>
+                    <div class="flex flex-wrap gap-x-4">
+                        @foreach (\App\Models\MenuItem::LABELS as $label)
+                            <label class="inline-flex min-h-11 items-center gap-2 text-sm">
+                                <input type="checkbox" wire:model="item.labels" value="{{ $label }}" class="size-4"> {{ $label }}
+                            </label>
+                        @endforeach
+                    </div>
+                    @error('item.labels.*') <p role="alert" class="text-sm text-destructive">{{ $message }}</p> @enderror
+                </fieldset>
                 <div class="flex flex-wrap gap-x-4 sm:col-span-2">
                     @foreach (['is_visible' => 'Tampilkan di situs', 'is_available' => 'Tersedia', 'is_featured' => 'Menu unggulan'] as $flag => $label)
                         <label class="inline-flex min-h-11 items-center gap-2 text-sm">
@@ -120,7 +131,7 @@
                         @endif
                         <div>
                             <p class="break-words font-medium">{{ $product->name }}</p>
-                            <p class="text-sm text-muted-foreground">{{ $product->category->name }} · Rp {{ number_format($product->price, 0, ',', '.') }} · {{ $product->is_visible ? 'Tampil' : 'Tersembunyi' }}{{ $product->is_featured ? ' · Unggulan' : '' }}</p>
+                            <p class="text-sm text-muted-foreground">{{ $product->category->name }} · Rp {{ number_format($product->price, 0, ',', '.') }} · {{ $product->is_visible ? 'Tampil' : 'Tersembunyi' }}{{ $product->is_featured ? ' · Unggulan' : '' }}{{ $product->labels ? ' · '.implode(', ', $product->labels) : '' }}</p>
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
