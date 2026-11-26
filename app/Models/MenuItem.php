@@ -16,6 +16,9 @@ class MenuItem extends Model
 {
     use ClearsPublicCache, SoftDeletes;
 
+    /** Label yang bisa dipasang di menu (FR-12). Urutan di sini = urutan tampil. */
+    public const array LABELS = ['Best Seller', 'Pedas', 'Baru'];
+
     protected $guarded = [];
 
     protected function casts(): array

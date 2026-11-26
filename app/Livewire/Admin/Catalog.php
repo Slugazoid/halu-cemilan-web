@@ -24,7 +24,7 @@ class Catalog extends Component
 
     private const array ITEM_DEFAULTS = [
         'category_id' => '', 'name' => '', 'slug' => '', 'description' => '', 'price' => '', 'weight_grams' => '',
-        'photo_alt' => '', 'ingredients' => '', 'shelf_life' => '', 'sort_order' => 0,
+        'photo_alt' => '', 'labels' => [], 'ingredients' => '', 'shelf_life' => '', 'sort_order' => 0,
         'is_visible' => true, 'is_available' => true, 'is_featured' => false,
     ];
 
@@ -52,6 +52,7 @@ class Catalog extends Component
         $this->resetValidation();
         $this->editingItem = $id;
         $this->item = MenuItem::query()->findOrFail($id)->only(array_keys(self::ITEM_DEFAULTS));
+        $this->item['labels'] = array_values($this->item['labels'] ?? []);
     }
 
     public function saveItem(): void
@@ -61,6 +62,8 @@ class Catalog extends Component
             'item.name' => ['required', 'string', 'max:80'],
             'item.slug' => ['nullable', 'string', 'max:60'],
             'item.photo_alt' => ['nullable', 'string', 'max:125'],
+            'item.labels' => ['nullable', 'array'],
+            'item.labels.*' => ['string', Rule::in(MenuItem::LABELS)],
             'photo' => ['nullable', ...ImageService::rules()],
             'item.category_id' => ['required', 'integer', Rule::exists('categories', 'id')->withoutTrashed()],
             'item.price' => ['required', 'integer', 'between:1,4294967295'],
@@ -75,6 +78,8 @@ class Catalog extends Component
         ]);
         $data = $validated['item'];
         $data['photo_alt'] = filled($data['photo_alt'] ?? null) ? trim($data['photo_alt']) : null;
+        // Label disimpan berurutan sesuai daftar resmi; tanpa label = null.
+        $data['labels'] = array_values(array_intersect(MenuItem::LABELS, $data['labels'] ?? [])) ?: null;
 
         $redirects = app(RedirectService::class);
 
