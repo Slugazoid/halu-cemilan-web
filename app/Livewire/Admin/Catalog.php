@@ -27,13 +27,15 @@ class Catalog extends Component
 
     private const array ITEM_DEFAULTS = [
         'category_id' => '', 'name' => '', 'slug' => '', 'description' => '', 'price' => '', 'weight_grams' => '',
-        'photo_alt' => '', 'labels' => [], 'ingredients' => '', 'shelf_life' => '', 'sort_order' => 0,
+        'photo_alt' => '', 'meta_title' => '', 'meta_description' => '', 'labels' => [], 'ingredients' => '', 'shelf_life' => '', 'sort_order' => 0,
         'is_visible' => true, 'is_available' => true, 'is_featured' => false,
     ];
 
     private const int MAX_GROUPS = 10;
 
     private const int MAX_OPTIONS = 20;
+
+    private const int MAX_FEATURED = 8;
 
     public array $item = self::ITEM_DEFAULTS;
 
@@ -43,7 +45,7 @@ class Catalog extends Component
      */
     public array $groups = [];
 
-    public array $category = ['name' => '', 'slug' => '', 'description' => '', 'sort_order' => 0];
+    public array $category = ['name' => '', 'slug' => '', 'description' => '', 'meta_title' => '', 'meta_description' => '', 'sort_order' => 0];
 
     /** Foto baru yang dipilih di form menu (belum disimpan). */
     public $photo = null;
@@ -96,6 +98,8 @@ class Catalog extends Component
             'item.name' => ['required', 'string', 'max:80'],
             'item.slug' => ['nullable', 'string', 'max:60'],
             'item.photo_alt' => ['nullable', 'string', 'max:125'],
+            'item.meta_title' => ['nullable', 'string', 'max:70'],
+            'item.meta_description' => ['nullable', 'string', 'max:170'],
             'item.labels' => ['nullable', 'array'],
             'item.labels.*' => ['string', Rule::in(MenuItem::LABELS)],
             'photo' => ['nullable', ...ImageService::rules()],
@@ -121,7 +125,9 @@ class Catalog extends Component
         ]);
         $data = $validated['item'];
         $groups = $validated['groups'] ?? [];
-        $data['photo_alt'] = filled($data['photo_alt'] ?? null) ? trim($data['photo_alt']) : null;
+        foreach (['photo_alt', 'meta_title', 'meta_description'] as $field) {
+            $data[$field] = filled($data[$field] ?? null) ? trim($data[$field]) : null;
+        }
         // Label disimpan berurutan sesuai daftar resmi; tanpa label = null.
         $data['labels'] = array_values(array_intersect(MenuItem::LABELS, $data['labels'] ?? [])) ?: null;
 
@@ -132,7 +138,7 @@ class Catalog extends Component
             Category::query()->findOrFail($data['category_id']);
             $item = $this->editingItem === null ? new MenuItem : MenuItem::query()->findOrFail($this->editingItem);
 
-            if ($data['is_featured'] && ! $item->is_featured && MenuItem::query()->where('is_featured', true)->count() >= 8) {
+            if ($data['is_featured'] && ! $item->is_featured && MenuItem::query()->where('is_featured', true)->count() >= self::MAX_FEATURED) {
                 throw ValidationException::withMessages(['item.is_featured' => 'Maksimal delapan menu unggulan.']);
             }
 
@@ -222,6 +228,25 @@ class Catalog extends Component
         session()->flash('status', 'Foto dihapus.');
     }
 
+    /** Tandai/lepas menu unggulan langsung dari daftar (FR-15, maks. 8). */
+    public function toggleFeatured(int $id): void
+    {
+        DB::transaction(function () use ($id): void {
+            StoreSetting::query()->lockForUpdate()->findOrFail(StoreSetting::SINGLETON_ID);
+            $item = MenuItem::query()->findOrFail($id);
+
+            if (! $item->is_featured && MenuItem::query()->where('is_featured', true)->count() >= self::MAX_FEATURED) {
+                throw ValidationException::withMessages(['featured' => 'Maksimal delapan menu unggulan. Lepas salah satu dulu.']);
+            }
+
+            $item->update(['is_featured' => ! $item->is_featured]);
+
+            if ($this->editingItem === $id) {
+                $this->item['is_featured'] = $item->is_featured;
+            }
+        });
+    }
+
     public function toggleAvailability(int $id): void
     {
         DB::transaction(function () use ($id): void {
@@ -254,18 +279,24 @@ class Catalog extends Component
     {
         $this->resetValidation();
         $this->editingCategory = $id;
-        $this->category = Category::query()->findOrFail($id)->only(['name', 'slug', 'description', 'sort_order']);
+        $this->category = Category::query()->findOrFail($id)->only(['name', 'slug', 'description', 'meta_title', 'meta_description', 'sort_order']);
     }
 
     public function saveCategory(): void
     {
         $data = $this->validate([
-            'category' => ['required', 'array:name,slug,description,sort_order'],
+            'category' => ['required', 'array:name,slug,description,meta_title,meta_description,sort_order'],
             'category.name' => ['required', 'string', 'max:60'],
             'category.slug' => ['nullable', 'string', 'max:60'],
+            'category.meta_title' => ['nullable', 'string', 'max:70'],
+            'category.meta_description' => ['nullable', 'string', 'max:170'],
             'category.description' => ['nullable', 'string', 'max:5000'],
             'category.sort_order' => ['required', 'integer', 'between:0,99999'],
         ])['category'];
+
+        foreach (['meta_title', 'meta_description'] as $field) {
+            $data[$field] = filled($data[$field] ?? null) ? trim($data[$field]) : null;
+        }
 
         $redirects = app(RedirectService::class);
 
@@ -329,6 +360,8 @@ class Catalog extends Component
         return view('livewire.admin.catalog', [
             'categories' => Category::query()->orderBy('sort_order')->orderBy('name')->get(),
             'items' => MenuItem::query()->with('category')->orderBy('sort_order')->orderBy('id')->paginate(12),
+            'featuredCount' => MenuItem::query()->where('is_featured', true)->count(),
+            'maxFeatured' => self::MAX_FEATURED,
             'currentPhoto' => $this->editingItem ? MenuItem::query()->find($this->editingItem)?->photo_url : null,
         ]);
     }
