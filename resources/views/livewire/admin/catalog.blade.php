@@ -103,6 +103,44 @@
                     </div>
                     @error('item.labels.*') <p role="alert" class="text-sm text-destructive">{{ $message }}</p> @enderror
                 </fieldset>
+                <fieldset class="grid gap-3 sm:col-span-2">
+                    <legend class="text-sm font-medium">Varian / opsi (mis. level pedas, ukuran)</legend>
+                    <p class="text-xs text-muted-foreground">Pelanggan memilih satu opsi per grup. Grup bertanda wajib harus dipilih sebelum masuk keranjang. Tambahan harga tidak ikut didiskon.</p>
+                    @foreach ($groups as $gi => $group)
+                        <div wire:key="group-{{ $group['id'] ?? 'baru-'.$gi }}" class="grid gap-3 rounded-lg border border-border p-3">
+                            <div class="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+                                <x-admin.field :name="'groups.'.$gi.'.name'" label="Nama grup">
+                                    <input id="groups.{{ $gi }}.name" wire:model="groups.{{ $gi }}.name" class="admin-input" maxlength="50" placeholder="mis. Level pedas">
+                                </x-admin.field>
+                                <label class="inline-flex min-h-11 items-center gap-2 text-sm">
+                                    <input type="checkbox" wire:model="groups.{{ $gi }}.is_required" class="size-4"> Wajib dipilih
+                                </label>
+                                <button type="button" wire:click="removeGroup({{ $gi }})" wire:confirm="Hapus grup ini beserta opsinya?" class="admin-button">Hapus grup</button>
+                            </div>
+                            @error('groups.'.$gi.'.options') <p role="alert" class="text-sm text-destructive">{{ $message }}</p> @enderror
+                            @foreach ($group['options'] as $oi => $option)
+                                <div wire:key="option-{{ $option['id'] ?? 'baru-'.$gi.'-'.$oi }}" class="grid grid-cols-2 items-end gap-2 sm:grid-cols-[1fr_8rem_8rem_auto]">
+                                    <x-admin.field :name="'groups.'.$gi.'.options.'.$oi.'.name'" label="Opsi" class="col-span-2 sm:col-span-1">
+                                        <input id="groups.{{ $gi }}.options.{{ $oi }}.name" wire:model="groups.{{ $gi }}.options.{{ $oi }}.name" class="admin-input" maxlength="50" placeholder="mis. Level 3">
+                                    </x-admin.field>
+                                    <x-admin.field :name="'groups.'.$gi.'.options.'.$oi.'.extra_price'" label="+ Harga (Rp)">
+                                        <input id="groups.{{ $gi }}.options.{{ $oi }}.extra_price" wire:model="groups.{{ $gi }}.options.{{ $oi }}.extra_price" class="admin-input" type="number" min="0" inputmode="numeric">
+                                    </x-admin.field>
+                                    <x-admin.field :name="'groups.'.$gi.'.options.'.$oi.'.extra_weight_grams'" label="+ Berat (g)">
+                                        <input id="groups.{{ $gi }}.options.{{ $oi }}.extra_weight_grams" wire:model="groups.{{ $gi }}.options.{{ $oi }}.extra_weight_grams" class="admin-input" type="number" min="0" max="65535" inputmode="numeric">
+                                    </x-admin.field>
+                                    <button type="button" wire:click="removeOption({{ $gi }}, {{ $oi }})" class="admin-button" aria-label="Hapus opsi">Hapus</button>
+                                </div>
+                            @endforeach
+                            <div>
+                                <button type="button" wire:click="addOption({{ $gi }})" class="admin-button admin-button-outline">Tambah opsi</button>
+                            </div>
+                        </div>
+                    @endforeach
+                    <div>
+                        <button type="button" wire:click="addGroup" class="admin-button admin-button-outline">Tambah grup varian</button>
+                    </div>
+                </fieldset>
                 <div class="flex flex-wrap gap-x-4 sm:col-span-2">
                     @foreach (['is_visible' => 'Tampilkan di situs', 'is_available' => 'Tersedia', 'is_featured' => 'Menu unggulan'] as $flag => $label)
                         <label class="inline-flex min-h-11 items-center gap-2 text-sm">
